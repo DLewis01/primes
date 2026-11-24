@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sieve of Eratosthenes Visualizer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e6e6e6;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            color: #4cc9f0;
+            text-shadow: 0 0 10px rgba(76, 201, 240, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #a5b1c2;
+            margin-bottom: 20px;
+        }
+        
+        .input-section {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .input-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        label {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #4cc9f0;
+        }
+        
+        input {
+            padding: 12px 18px;
+            border-radius: 8px;
+            border: 2px solid #3498db;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1.1rem;
+            width: 120px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #4cc9f0;
+            box-shadow: 0 0 0 3px rgba(76, 201, 240, 0.2);
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        #start-btn {
+            background: linear-gradient(to right, #3498db, #2ecc71);
+            color: white;
+        }
+        
+        #start-btn:hover {
+            background: linear-gradient(to right, #2980b9, #27ae60);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
+        }
+        
+        #reset-btn {
+            background: linear-gradient(to right, #e74c3c, #e67e22);
+            color: white;
+        }
+        
+        #reset-btn:hover {
+            background: linear-gradient(to right, #c0392b, #d35400);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+        }
+        
+        #step-btn {
+            background: linear-gradient(to right, #9b59b6, #3498db);
+            color: white;
+        }
+        
+        #step-btn:hover {
+            background: linear-gradient(to right, #8e44ad, #2980b9);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.3);
+        }
+        
+        button:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        
+        .info-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .info-box {
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .info-title {
+            font-size: 1rem;
+            color: #a5b1c2;
+            margin-bottom: 8px;
+        }
+        
+        .info-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #4cc9f0;
+        }
+        
+        .prime {
+            color: #2ecc71 !important;
+            text-shadow: 0 0 8px rgba(46, 204, 113, 0.5);
+        }
+        
+        .current {
+            color: #f1c40f !important;
+            text-shadow: 0 0 8px rgba(241, 196, 15, 0.5);
+        }
+        
+        .eliminated {
+            color: #e74c3c !important;
+            text-shadow: 0 0 8px rgba(231, 76, 60, 0.3);
+        }
+        
+        .numbers-container {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .numbers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 12px;
+        }
+        
+        .number-box {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.4s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .number-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.05);
+            z-index: 1;
+        }
+        
+        .number-box span {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .number-box.prime {
+            background: rgba(46, 204, 113, 0.15);
+            border-color: #2ecc71;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .number-box.current {
+            background: rgba(241, 196, 15, 0.15);
+            border-color: #f1c40f;
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.3);
+            animation: pulse 1.5s infinite;
+        }
+        
+        .number-box.eliminated {
+            background: rgba(231, 76, 60, 0.15);
+            border-color: #e74c3c;
+            transform: scale(0.95);
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(241, 196, 15, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(241, 196, 15, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(241, 196, 15, 0); }
+        }
+        
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .legend-prime {
+            background: rgba(46, 204, 113, 0.7);
+            border: 1px solid #2ecc71;
+        }
+        
+        .legend-current {
+            background: rgba(241, 196, 15, 0.7);
+            border: 1px solid #f1c40f;
+        }
+        
+        .legend-eliminated {
+            background: rgba(231, 76, 60, 0.7);
+            border: 1px solid #e74c3c;
+        }
+        
+        .legend-untouched {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .algorithm-steps {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .algorithm-steps h2 {
+            color: #4cc9f0;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+        }
+        
+        .step-log {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .step-item {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Courier New', monospace;
+            color: #a5b1c2;
+        }
+        
+        .step-item:last-child {
+            border-bottom: none;
+        }
+        
+        .step-item.current-step {
+            background: rgba(76, 201, 240, 0.1);
+            border-left: 4px solid #4cc9f0;
+            color: white;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #a5b1c2;
+            font-size: 0.9rem;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            .numbers-grid {
+                grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+                gap: 10px;
+            }
+            
+            .number-box {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Sieve of Eratosthenes</h1>
+            <p class="subtitle">Visualize the ancient algorithm for finding prime numbers up to a given limit</p>
+        </header>
+<p>
+ circle the first prime (2), then cross out all its multiples (4, 6, 8...), circle the next uncrossed number (3), cross out its multiples (6, 9, 12...), and repeat until you reach the square root of your limit
+</p>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <label for="limit">Find primes up to:</label>
+                <input type="number" id="limit" min="2" max="200" value="50">
+                <div class="buttons">
+                    <button id="start-btn">
+                        <span>▶ Start</span>
+                    </button>
+                    <button id="step-btn">
+                        <span>⏭ Step</span>
+                    </button>
+                    <button id="reset-btn">
+                        <span>↻ Reset</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-section">
+            <div class="info-box">
+                <div class="info-title">Current Prime</div>
+                <div id="current-prime" class="info-value">-</div>
+            </div>
+            <div class="info-box">
+                <div class="info-title">Primes Found</div>
+                <div id="primes-count" class="info-value">0</div>
+            </div>
+            <div class="info-box">
+                <div class="info-title">Numbers Eliminated</div>
+                <div id="eliminated-count" class="info-value">0</div>
+            </div>
+            <div class="info-box">
+                <div class="info-title">Step</div>
+                <div id="step-count" class="info-value">0</div>
+            </div>
+        </div>
+        
+        <div class="numbers-container">
+            <div id="numbers-grid" class="numbers-grid">
+                <!-- Numbers will be generated here -->
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color legend-current"></div>
+                    <span>Current Prime</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-prime"></div>
+                    <span>Prime Number</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-eliminated"></div>
+                    <span>Eliminated</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-untouched"></div>
+                    <span>Untouched</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="algorithm-steps">
+            <h2>Algorithm Steps</h2>
+            <div id="step-log" class="step-log">
+                <div class="step-item">Enter a number and click "Start" to begin the visualization.</div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>The Sieve of Eratosthenes is an ancient algorithm for finding all prime numbers up to any given limit.</p>
+            <p>It works by iteratively marking as composite (i.e., not prime) the multiples of each prime, starting with the first prime number, 2.</p>
+        </footer>
+    </div>
+
+    <script>
+        // DOM elements
+        const limitInput = document.getElementById('limit');
+        const startBtn = document.getElementById('start-btn');
+        const stepBtn = document.getElementById('step-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const numbersGrid = document.getElementById('numbers-grid');
+        const currentPrimeEl = document.getElementById('current-prime');
+        const primesCountEl = document.getElementById('primes-count');
+        const eliminatedCountEl = document.getElementById('eliminated-count');
+        const stepCountEl = document.getElementById('step-count');
+        const stepLog = document.getElementById('step-log');
+        
+        // Algorithm state
+        let sieveState = {
+            limit: 0,
+            primes: [],
+            eliminated: new Set(),
+            currentPrime: null,
+            currentMultiple: null,
+            isRunning: false,
+            step: 0,
+            sqrtLimit: 0,
+            numbers: []
+        };
+        
+        // Initialize the visualization
+        function initialize() {
+            const limit = parseInt(limitInput.value);
+            
+            if (isNaN(limit) || limit < 2 || limit > 200) {
+                alert("Please enter a valid number between 2 and 200");
+                return;
+            }
+            
+            // Reset state
+            sieveState = {
+                limit,
+                primes: [],
+                eliminated: new Set(),
+                currentPrime: null,
+                currentMultiple: null,
+                isRunning: false,
+                step: 0,
+                sqrtLimit: Math.floor(Math.sqrt(limit)),
+                numbers: Array.from({length: limit - 1}, (_, i) => i + 2)
+            };
+            
+            // Update UI
+            currentPrimeEl.textContent = '-';
+            primesCountEl.textContent = '0';
+            eliminatedCountEl.textContent = '0';
+            stepCountEl.textContent = '0';
+            
+            // Clear step log
+            stepLog.innerHTML = '<div class="step-item">Initialized with numbers from 2 to ' + limit + '.</div>';
+            
+            // Generate number boxes
+            numbersGrid.innerHTML = '';
+            sieveState.numbers.forEach(num => {
+                const numberBox = document.createElement('div');
+                numberBox.className = 'number-box';
+                numberBox.id = `num-${num}`;
+                numberBox.innerHTML = `<span>${num}</span>`;
+                numbersGrid.appendChild(numberBox);
+            });
+            
+            // Enable buttons
+            startBtn.disabled = false;
+            stepBtn.disabled = false;
+            resetBtn.disabled = false;
+            
+            // Add initial step to log
+            addStepToLog(`Ready to find primes up to ${limit}.`, false);
+        }
+        
+        // Add a step to the log
+        function addStepToLog(message, isCurrent = true) {
+            const stepItem = document.createElement('div');
+            stepItem.className = `step-item ${isCurrent ? 'current-step' : ''}`;
+            stepItem.textContent = `Step ${sieveState.step}: ${message}`;
+            
+            stepLog.appendChild(stepItem);
+            
+            // Scroll to the bottom
+            stepLog.scrollTop = stepLog.scrollHeight;
+            
+            // Remove current-step class from previous items
+            if (isCurrent) {
+                const previousCurrent = stepLog.querySelectorAll('.current-step');
+                previousCurrent.forEach(el => {
+                    if (el !== stepItem) {
+                        el.classList.remove('current-step');
+                    }
+                });
+            }
+        }
+        
+        // Run a single step of the algorithm
+        function runStep() {
+            if (!sieveState.isRunning && sieveState.currentPrime === null) {
+                // Start the algorithm
+                sieveState.isRunning = true;
+                sieveState.currentPrime = 2;
+                updateNumberBox(2, 'current');
+                currentPrimeEl.textContent = '2';
+                addStepToLog(`Starting with first prime: ${sieveState.currentPrime}`);
+                sieveState.step++;
+                stepCountEl.textContent = sieveState.step;
+                return;
+            }
+            
+            if (sieveState.currentPrime > sieveState.sqrtLimit && sieveState.currentMultiple === null) {
+                // Algorithm is complete
+                finishAlgorithm();
+                return;
+            }
+            
+            // If we're in the middle of eliminating multiples of a prime
+            if (sieveState.currentMultiple !== null) {
+                const multiple = sieveState.currentMultiple;
+                
+                // Mark this multiple as eliminated if it's not the prime itself
+                if (multiple !== sieveState.currentPrime) {
+                    sieveState.eliminated.add(multiple);
+                    updateNumberBox(multiple, 'eliminated');
+                    eliminatedCountEl.textContent = sieveState.eliminated.size;
+                    addStepToLog(`Eliminated ${multiple} (multiple of ${sieveState.currentPrime})`);
+                }
+                
+                // Calculate next multiple
+                const nextMultiple = multiple + sieveState.currentPrime;
+                
+                if (nextMultiple > sieveState.limit) {
+                    // Done with this prime, move to the next
+                    sieveState.primes.push(sieveState.currentPrime);
+                    updateNumberBox(sieveState.currentPrime, 'prime');
+                    primesCountEl.textContent = sieveState.primes.length;
+                    
+                    addStepToLog(`Finished with prime ${sieveState.currentPrime}. Found ${sieveState.primes.length} primes so far.`);
+                    
+                    // Find next prime
+                    findNextPrime();
+                } else {
+                    // Continue with next multiple
+                    sieveState.currentMultiple = nextMultiple;
+                    
+                    // Update UI for next multiple
+                    if (!sieveState.eliminated.has(nextMultiple) && nextMultiple !== sieveState.currentPrime) {
+                        updateNumberBox(nextMultiple, 'current');
+                    }
+                    
+                    sieveState.step++;
+                    stepCountEl.textContent = sieveState.step;
+                }
+            } else {
+                // Start eliminating multiples of the current prime
+                sieveState.currentMultiple = sieveState.currentPrime * 2;
+                updateNumberBox(sieveState.currentMultiple, 'current');
+                addStepToLog(`Starting to eliminate multiples of ${sieveState.currentPrime}`);
+                sieveState.step++;
+                stepCountEl.textContent = sieveState.step;
+            }
+        }
+        
+        // Find the next prime number
+        function findNextPrime() {
+            // Reset current multiple
+            sieveState.currentMultiple = null;
+            
+            // Find next uneliminated number greater than current prime
+            let nextPrime = sieveState.currentPrime + 1;
+            
+            while (nextPrime <= sieveState.limit) {
+                if (!sieveState.eliminated.has(nextPrime)) {
+                    sieveState.currentPrime = nextPrime;
+                    currentPrimeEl.textContent = nextPrime;
+                    updateNumberBox(nextPrime, 'current');
+                    
+                    if (sieveState.currentPrime > sieveState.sqrtLimit) {
+                        // This prime is greater than sqrt(limit), so we're done with the main loop
+                        break;
+                    }
+                    
+                    sieveState.step++;
+                    stepCountEl.textContent = sieveState.step;
+                    return;
+                }
+                nextPrime++;
+            }
+            
+            // If we get here, we've processed all numbers up to sqrt(limit)
+            // Now mark all remaining unmarked numbers as primes
+            finishAlgorithm();
+        }
+        
+        // Finish the algorithm
+        function finishAlgorithm() {
+            sieveState.isRunning = false;
+            
+            // Mark all remaining uneliminated numbers as primes
+            let remainingPrimes = 0;
+            for (let i = 2; i <= sieveState.limit; i++) {
+                if (!sieveState.eliminated.has(i) && !sieveState.primes.includes(i)) {
+                    sieveState.primes.push(i);
+                    updateNumberBox(i, 'prime');
+                    remainingPrimes++;
+                }
+            }
+            
+            // Update counts
+            primesCountEl.textContent = sieveState.primes.length;
+            eliminatedCountEl.textContent = sieveState.eliminated.size;
+            currentPrimeEl.textContent = 'Done!';
+            
+            // Sort primes for display
+            sieveState.primes.sort((a, b) => a - b);
+            
+            addStepToLog(`Algorithm complete! Found ${sieveState.primes.length} primes: ${sieveState.primes.join(', ')}`, false);
+            
+            // Disable start and step buttons
+            startBtn.disabled = true;
+            stepBtn.disabled = true;
+        }
+        
+        // Update the visual state of a number box
+        function updateNumberBox(num, state) {
+            const numberBox = document.getElementById(`num-${num}`);
+            if (!numberBox) return;
+            
+            // Remove all state classes
+            numberBox.classList.remove('prime', 'current', 'eliminated');
+            
+            // Add the new state class
+            if (state === 'prime') {
+                numberBox.classList.add('prime');
+            } else if (state === 'current') {
+                numberBox.classList.add('current');
+            } else if (state === 'eliminated') {
+                numberBox.classList.add('eliminated');
+            }
+        }
+        
+        // Run the algorithm continuously with a delay between steps
+        function runAlgorithm() {
+            if (sieveState.isRunning || sieveState.currentPrime !== null) {
+                // Already running
+                return;
+            }
+            
+            // Initialize if needed
+            if (sieveState.limit === 0) {
+                initialize();
+            }
+            
+            // Disable start button while running
+            startBtn.disabled = true;
+            stepBtn.disabled = true;
+            
+            // Run steps with a delay
+            function runNextStep() {
+                runStep();
+                
+                if (sieveState.isRunning || sieveState.currentPrime <= sieveState.sqrtLimit) {
+                    // Continue with next step
+                    setTimeout(runNextStep, 800);
+                } else {
+                    // Algorithm finished
+                    startBtn.disabled = true;
+                    stepBtn.disabled = true;
+                }
+            }
+            
+            // Start the algorithm
+            runNextStep();
+        }
+        
+        // Event listeners
+        startBtn.addEventListener('click', runAlgorithm);
+        
+        stepBtn.addEventListener('click', () => {
+            if (sieveState.limit === 0) {
+                initialize();
+            }
+            
+            if (!sieveState.isRunning && sieveState.currentPrime === null) {
+                sieveState.isRunning = true;
+            }
+            
+            runStep();
+        });
+        
+        resetBtn.addEventListener('click', initialize);
+        
+        limitInput.addEventListener('change', () => {
+            // Reset if the limit changes
+            if (sieveState.isRunning || sieveState.currentPrime !== null) {
+                initialize();
+            }
+        });
+        
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            initialize();
+        });
+    </script>
+</body>
+</html>
