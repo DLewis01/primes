@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Zeta Pole Magnitude Sonification</title>
+
+<style>
+html, body {
+    margin: 0;
+    overflow: hidden;
+    background: black;
+}
+
+canvas {
+    display: block;
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+// =====================================================
+// Canvas
+// =====================================================
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    updateScale();
+}
+
+window.addEventListener("resize", resize);
+
+// =====================================================
+// Constants
+// =====================================================
+
+const GAMMA = 0.5772156649;
+
+const sigmaMin = -2;
+const sigmaMax = 4;
+
+const tMin = -4;
+const tMax = 4;
+
+// =====================================================
+// Audio
+// =====================================================
+
+let audioCtx = null;
+
+function initAudio() {
+
+    if (!audioCtx) {
+
+        audioCtx =
+            new (
+                window.AudioContext ||
+                window.webkitAudioContext
+            )();
+    }
+}
+
+function clamp(x, a, b) {
+
+    return Math.max(
+        a,
+        Math.min(b, x)
+    );
+}
+
+function poleMagnitude(s) {
+
+    const dx = s.re - 1;
+    const dy = s.im;
+
+    const dist =
+        Math.sqrt(dx * dx + dy * dy);
+
+    return 1 / Math.max(dist, 0.05);
+}
+
+function magnitudeTone(
+    frequency,
+    gainValue,
+    duration = 0.8
+) {
+
+    if (!audioCtx) return;
+
+    const osc =
+        audioCtx.createOscillator();
+
+    const filter =
+        audioCtx.createBiquadFilter();
+
+    const gain =
+        audioCtx.createGain();
+
+    osc.type = "sawtooth";
+
+    osc.frequency.value =
+        frequency;
+
+    filter.type =
+        "lowpass";
+
+    filter.frequency.value =
+        frequency * 2.5;
+
+    gain.gain.value =
+        gainValue;
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(
+        audioCtx.destination
+    );
+
+    osc.start();
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        audioCtx.currentTime +
+        duration
+    );
+
+    osc.stop(
+        audioCtx.currentTime +
+        duration
+    );
+}
+
+function singularitySweep() {
+
+    if (!audioCtx) return;
+
+    const osc =
+        audioCtx.createOscillator();
+
+    const filter =
+        audioCtx.createBiquadFilter();
+
+    const gain =
+        audioCtx.createGain();
+
+    osc.type = "sawtooth";
+
+    filter.type = "bandpass";
+    filter.Q.value = 15;
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(
+        audioCtx.destination
+    );
+
+    osc.frequency.setValueAtTime(
+        40,
+        audioCtx.currentTime
+    );
+
+    osc.frequency.exponentialRampToValueAtTime(
+        2500,
+        audioCtx.currentTime + 2
+    );
+
+    gain.gain.setValueAtTime(
+        0.001,
+        audioCtx.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.12,
+        audioCtx.currentTime + 0.4
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        audioCtx.currentTime + 2
+    );
+
+    osc.start();
+    osc.stop(
+        audioCtx.currentTime + 2
+    );
+}
+
+function completionChord() {
+
+    const notes = [
+        261.63,
+        329.63,
+        392.00,
+        523.25
+    ];
+
+    notes.forEach((n, i) => {
+
+        setTimeout(() => {
+
+            magnitudeTone(
+                n,
+                0.02,
+                2.5
+            );
+
+        }, i * 100);
+
+    });
+}
+
+// =====================================================
+// Complex Helpers
+// =====================================================
+
+function C(re, im) {
+
+    return {
+        re,
+        im
+    };
+}
+
+function mix(a, b, t) {
+
+    return {
+
+        re:
+            a.re * (1 - t) +
+            b.re * t,
+
+        im:
+            a.im * (1 - t) +
+            b.im * t
+    };
+}
+
+function smoothstep(x) {
+
+    x = Math.max(
+        0,
+        Math.min(1, x)
+    );
+
+    return x * x * (3 - 2 * x);
+}
+
+// =====================================================
+// Pole Approximation
+// =====================================================
+
+function zetaPole(s) {
+
+    const a = s.re - 1;
+    const b = s.im;
+
+    const d =
+        a * a +
+        b * b;
+
+    return {
+
+        re:
+            a / d +
+            GAMMA,
+
+        im:
+            -b / d
+    };
+}
+
+// =====================================================
+// Display
+// =====================================================
+
+let scale = 100;
+
+function updateScale() {
+
+    scale =
+        Math.min(
+            canvas.width,
+            canvas.height
+        ) * 0.12;
+}
+
+function screen(z) {
+
+    return {
+
+        x:
+            canvas.width / 2 +
+            scale * z.re,
+
+        y:
+            canvas.height / 2 -
+            scale * z.im
+    };
+}
+
+// =====================================================
+// Animation
+// =====================================================
+
+let sweep = -0.1;
+let running = false;
+
+const playedColumns =
+    new Set();
+
+window.addEventListener(
+    "keydown",
+    e => {
+
+        if (e.code === "Space") {
+
+            initAudio();
+
+            sweep = -0.1;
+            running = true;
+
+            playedColumns.clear();
+        }
+    }
+);
+
+// =====================================================
+// Transform
+// =====================================================
+
+function transform(
+    s,
+    wave
+) {
+
+    const mapped =
+        zetaPole(s);
+
+    const position =
+        (sigmaMax - s.re) /
+        (sigmaMax - sigmaMin);
+
+    const amount =
+        smoothstep(
+            (wave - position) * 3 + 0.5
+        );
+
+    return mix(
+        s,
+        mapped,
+        amount
+    );
+}
+
+// =====================================================
+// Sonification
+// =====================================================
+
+function sonifyColumn(sigma) {
+
+    const rows = [
+        -3,
+        -2,
+        -1,
+         0,
+         1,
+         2,
+         3
+    ];
+
+    rows.forEach((im, index) => {
+
+        const currentPoint =
+            transform(
+                {
+                    re: sigma,
+                    im: im
+                },
+                sweep
+            );
+
+        const magnitude =
+            Math.sqrt(
+                currentPoint.re *
+                currentPoint.re +
+
+                currentPoint.im *
+                currentPoint.im
+            );
+
+        const energy =
+            Math.log(magnitude + 1);
+
+        const frequency =
+            120 +
+            energy * 450;
+
+        const volume =
+            clamp(
+                0.004 +
+                energy * 0.012,
+                0.003,
+                0.06
+            );
+
+        setTimeout(() => {
+
+            magnitudeTone(
+                frequency,
+                volume,
+                0.9
+            );
+
+        }, index * 40);
+
+    });
+}
+
+// =====================================================
+// Draw Curve
+// =====================================================
+
+function drawCurve(
+    points,
+    color,
+    wave
+) {
+
+    let first = true;
+
+    ctx.beginPath();
+
+    for (const p of points) {
+
+        const z =
+            transform(
+                p,
+                wave
+            );
+
+        if (
+            !isFinite(z.re) ||
+            !isFinite(z.im)
+        ) continue;
+
+        if (
+            Math.abs(z.re) > 20 ||
+            Math.abs(z.im) > 20
+        ) continue;
+
+        const s =
+            screen(z);
+
+        if (first) {
+
+            ctx.moveTo(
+                s.x,
+                s.y
+            );
+
+            first = false;
+
+        } else {
+
+            ctx.lineTo(
+                s.x,
+                s.y
+            );
+        }
+    }
+
+    ctx.strokeStyle =
+        color;
+
+    ctx.stroke();
+}
+
+// =====================================================
+// Main Loop
+// =====================================================
+
+function frame() {
+
+    if (running) {
+
+        sweep += 0.002;
+
+        for (
+            let sigma = sigmaMin;
+            sigma <= sigmaMax;
+            sigma += 0.25
+        ) {
+
+            const position =
+                (sigmaMax - sigma) /
+                (sigmaMax - sigmaMin);
+
+            if (
+                sweep > position &&
+                !playedColumns.has(sigma)
+            ) {
+
+                playedColumns.add(
+                    sigma
+                );
+
+                sonifyColumn(
+                    sigma
+                );
+            }
+        }
+
+        const polePosition =
+            (sigmaMax - 1) /
+            (sigmaMax - sigmaMin);
+
+        if (
+            sweep > polePosition &&
+            !playedColumns.has("pole")
+        ) {
+
+            playedColumns.add(
+                "pole"
+            );
+
+            singularitySweep();
+        }
+
+        if (sweep >= 1.1) {
+
+            sweep = 1.1;
+
+            running = false;
+
+            completionChord();
+        }
+    }
+
+    ctx.fillStyle =
+        "black";
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    ctx.strokeStyle =
+        "#222";
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        0,
+        canvas.height / 2
+    );
+
+    ctx.lineTo(
+        canvas.width,
+        canvas.height / 2
+    );
+
+    ctx.moveTo(
+        canvas.width / 2,
+        0
+    );
+
+    ctx.lineTo(
+        canvas.width / 2,
+        canvas.height
+    );
+
+    ctx.stroke();
+
+    // Vertical grid lines
+
+    for (
+        let sigma = sigmaMin;
+        sigma <= sigmaMax;
+        sigma += 0.25
+    ) {
+
+        const pts = [];
+
+        for (
+            let t = tMin;
+            t <= tMax;
+            t += 0.03
+        ) {
+
+            pts.push(
+                C(
+                    sigma,
+                    t
+                )
+            );
+        }
+
+        drawCurve(
+            pts,
+            "rgba(255,180,0,0.85)",
+            sweep
+        );
+    }
+
+    // Horizontal grid lines
+
+    for (
+        let t = tMin;
+        t <= tMax;
+        t += 0.25
+    ) {
+
+        const pts = [];
+
+        for (
+            let sigma = sigmaMin;
+            sigma <= sigmaMax;
+            sigma += 0.03
+        ) {
+
+            pts.push(
+                C(
+                    sigma,
+                    t
+                )
+            );
+        }
+
+        drawCurve(
+            pts,
+            "rgba(80,180,255,0.85)",
+            sweep
+        );
+    }
+
+    const pole =
+        screen({
+            re: 1,
+            im: 0
+        });
+
+    ctx.fillStyle = "red";
+
+    ctx.beginPath();
+
+    ctx.arc(
+        pole.x,
+        pole.y,
+        5,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.font = "16px sans-serif";
+
+    if (running) {
+
+        ctx.fillText(
+            "Transforming...",
+            20,
+            30
+        );
+
+    } else {
+
+        ctx.fillText(
+            "Press SPACE to begin",
+            20,
+            30
+        );
+
+        if (sweep >= 1.1) {
+
+            ctx.fillText(
+                "Transformation complete",
+                20,
+                55
+            );
+        }
+    }
+
+    requestAnimationFrame(
+        frame
+    );
+}
+
+resize();
+frame();
+
+</script>
+
+</body>
+</html>
