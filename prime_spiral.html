@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Prime Spiral</title>
+<style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; color: #fff; font-family: Arial, sans-serif; }
+    #app { position: fixed; inset: 0; }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    .panel {
+        position: fixed;
+        z-index: 10;
+        background: rgba(12,12,12,.88);
+        border: 1px solid rgba(255,255,255,.22);
+        border-radius: 14px;
+        box-shadow: 0 10px 35px rgba(0,0,0,.45);
+        backdrop-filter: blur(8px);
+    }
+
+    #controls {
+        left: 15px; top: 18px; width: 282px;
+        padding: 16px 17px;
+    }
+
+    h1 { margin: 0 0 12px; font-size: 23px; }
+    .intro { font-size: 13px; line-height: 1.45; color: #ddd; }
+    .formula { font-family: Georgia, serif; font-style: italic; font-size: 16px; line-height: 1.55; margin: 7px 0 12px; }
+    .fx { color: #ff5252; }
+    .fy { color: #55aaff; }
+    .fz { color: #63e66d; }
+
+    hr { border: 0; border-top: 1px solid rgba(255,255,255,.16); margin: 14px 0; }
+
+    label { display:block; margin: 12px 0 6px; font-size: 14px; }
+    .value { float:right; color:#bbb; }
+    input[type=range] { width:100%; accent-color:#4d8dff; }
+    select, button {
+        width:100%; border-radius:6px; border:1px solid rgba(255,255,255,.25);
+        background:#151515; color:white; padding:9px; font-size:14px;
+    }
+    button { cursor:pointer; margin-top:12px; }
+    button:hover { background:#222; }
+
+    .check { display:flex; align-items:center; gap:8px; margin:10px 0; font-size:14px; }
+    .check input { width:16px; height:16px; accent-color:#4d8dff; }
+
+    #help {
+        right: 18px; top: 20px; width: 188px; padding:14px 15px;
+    }
+    #help h2 { font-size:16px; margin:0 0 10px; }
+    #help div { font-size:13px; margin:7px 0; color:#ddd; }
+    .dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:7px; }
+
+    #legend {
+        left: 15px; bottom: 17px; width: 345px; padding:13px 16px;
+    }
+    #gradient { height:20px; border-radius:3px; background:linear-gradient(90deg,#c000ff,#304cff,#00cfff,#00ff70,#ffff00,#ff6b00,#ff1744); }
+    .legend-labels { display:flex; justify-content:space-between; font-size:11px; color:#aaa; margin-top:4px; }
+
+    #equations {
+        right:18px; bottom:17px; width:165px; padding:13px 15px;
+    }
+    #equations .formula { margin:3px 0; font-size:14px; }
+
+    #stats { margin-top:10px; font-size:13px; line-height:1.6; color:#ddd; }
+
+    @media (max-width: 700px) {
+        #controls { width:245px; transform:scale(.88); transform-origin:top left; }
+        #help, #legend, #equations { display:none; }
+    }
+</style>
+</head>
+
+
+<body>
+<div id="app"></div>
+
+<div id="controls" class="panel">
+    <h1>3D Prime Spiral</h1>
+    <div class="intro">
+        Each point represents a value <b>p</b>, plotted using the equations below.
+        Switch between prime values and all integer values to see the difference:
+        <div class="formula">
+            <div class="fx">x = p sin p cos p</div>
+            <div class="fy">y = p sin p</div>
+            <div class="fz">z = p cos p</div>
+        </div>
+        • Drag to rotate<br>
+        • Scroll to zoom<br>
+        • Right-drag to pan
+    </div>
+
+    <hr>
+
+    <label>Max Value <span id="maxPrimeValue" class="value">2000</span></label>
+    <input id="maxPrime" type="range" min="50" max="10000" step="50" value="2000">
+
+    <label>Point Size <span id="pointSizeValue" class="value">2.5</span></label>
+    <input id="pointSize" type="range" min="0.5" max="6" step="0.1" value="2.5">
+
+    <label>Points</label>
+    <select id="sequenceMode">
+        <option value="primes">Primes Only</option>
+        <option value="integers">All Integers</option>
+    </select>
+
+    <label>Colour By</label>
+    <select id="colourMode">
+        <option value="z">Z (Height)</option>
+        <option value="p">Number</option>
+        <option value="distance">Distance from Origin</option>
+    </select>
+
+    <div class="check"><input id="showAxes" type="checkbox" checked><span>Show Axes</span></div>
+    <div class="check"><input id="showGrid" type="checkbox" checked><span>Show Grid</span></div>
+    <div class="check"><input id="showTrail" type="checkbox"><span>Trail (Connect Points)</span></div>
+
+    <button id="reset">Reset View</button>
+    <div id="stats"></div>
+</div>
+
+<div id="help" class="panel">
+    <h2>Mouse Controls</h2>
+    <div><span class="dot" style="background:#4285ff"></span>Left drag — Rotate</div>
+    <div><span class="dot" style="background:#ffc107"></span>Right drag — Pan</div>
+    <div><span class="dot" style="background:#57e36b"></span>Wheel — Zoom</div>
+</div>
+
+<div id="legend" class="panel">
+    <div style="font-size:14px;margin-bottom:8px;">Z (Height)</div>
+    <div id="gradient"></div>
+    <div class="legend-labels"><span>-max</span><span>-½max</span><span>0</span><span>½max</span><span>max</span></div>
+</div>
+
+<div id="equations" class="panel">
+    <div style="font-size:14px;margin-bottom:6px;">Equations:</div>
+    <div class="formula">
+        <div class="fx">x = p sin p cos p</div>
+        <div class="fy">y = p sin p</div>
+        <div class="fz">z = p cos p</div>
+    </div>
+</div>
+
+
+
+
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.161/build/three.module.js";
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 5000);
+
+const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    powerPreference: "high-performance"
+});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.getElementById("app").appendChild(renderer.domElement);
+
+// ------------------------------------------------------------
+// Prime generation
+// ------------------------------------------------------------
+function generatePrimes(max) {
+    const sieve = new Uint8Array(max + 1);
+    const primes = [];
+    for (let i = 2; i <= max; i++) {
+        if (!sieve[i]) {
+            primes.push(i);
+            if (i * i <= max) {
+                for (let j = i * i; j <= max; j += i) sieve[j] = 1;
+            }
+        }
+    }
+    return primes;
+}
+
+// ------------------------------------------------------------
+// Camera / interaction
+// ------------------------------------------------------------
+let target = new THREE.Vector3(0, 0, 0);
+let distance = 430;
+let yaw = 0.65;
+let pitch = 0.48;
+
+const rotation = { active:false, x:0, y:0 };
+const pan = { active:false, x:0, y:0 };
+
+renderer.domElement.addEventListener("contextmenu", e => e.preventDefault());
+
+renderer.domElement.addEventListener("pointerdown", e => {
+    if (e.button === 0) {
+        rotation.active = true;
+        rotation.x = e.clientX;
+        rotation.y = e.clientY;
+    } else if (e.button === 2) {
+        pan.active = true;
+        pan.x = e.clientX;
+        pan.y = e.clientY;
+    }
+});
+
+window.addEventListener("pointerup", () => {
+    rotation.active = false;
+    pan.active = false;
+});
+
+window.addEventListener("pointermove", e => {
+    if (rotation.active) {
+        yaw -= (e.clientX - rotation.x) * 0.008;
+        pitch -= (e.clientY - rotation.y) * 0.008;
+        pitch = Math.max(-1.48, Math.min(1.48, pitch));
+        rotation.x = e.clientX;
+        rotation.y = e.clientY;
+    }
+
+    if (pan.active) {
+        const scale = distance * 0.002;
+        const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+        const up = new THREE.Vector3(0, 1, 0);
+        target.addScaledVector(right, -(e.clientX - pan.x) * scale);
+        target.addScaledVector(up, (e.clientY - pan.y) * scale);
+        pan.x = e.clientX;
+        pan.y = e.clientY;
+    }
+});
+
+renderer.domElement.addEventListener("wheel", e => {
+    e.preventDefault();
+    distance *= Math.exp(e.deltaY * 0.001);
+    distance = Math.max(20, Math.min(3000, distance));
+}, { passive:false });
+
+function resetView() {
+    target.set(0,0,0);
+    distance = 430;
+    yaw = 0.65;
+    pitch = 0.48;
+}
+
+
+
+
+
+// ------------------------------------------------------------
+// Scene helpers
+// ------------------------------------------------------------
+const pointGroup = new THREE.Group();
+scene.add(pointGroup);
+
+const helperGroup = new THREE.Group();
+scene.add(helperGroup);
+
+function makeLine(points, color, opacity=1) {
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({
+        color,
+        transparent: opacity < 1,
+        opacity
+    });
+    const line = new THREE.Line(geometry, material);
+    helperGroup.add(line);
+    return line;
+}
+
+function buildGrid(size) {
+    while (helperGroup.children.length) {
+        const o = helperGroup.children.pop();
+        o.geometry?.dispose();
+        o.material?.dispose();
+    }
+
+    const grid = new THREE.GridHelper(size * 2, 12, 0x444444, 0x222222);
+    helperGroup.add(grid);
+
+    // vertical grid planes
+    const mat = new THREE.LineBasicMaterial({
+        color: 0x333333,
+        transparent: true,
+        opacity: 0.65
+    });
+
+    for (let y = -size; y <= size; y += size / 6) {
+        const g = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-size,y,-size),
+            new THREE.Vector3(size,y,-size),
+            new THREE.Vector3(size,y,size),
+            new THREE.Vector3(-size,y,size),
+            new THREE.Vector3(-size,y,-size)
+        ]);
+        helperGroup.add(new THREE.Line(g, mat.clone()));
+    }
+
+    // axes
+    const axes = new THREE.AxesHelper(size * 1.18);
+    axes.material.transparent = true;
+    axes.material.opacity = 0.9;
+    axes.userData.isAxes = true;
+    helperGroup.add(axes);
+}
+
+function updateHelpers(maxAbs) {
+    const size = Math.ceil(maxAbs / 50) * 50;
+    buildGrid(Math.max(size, 100));
+}
+
+// ------------------------------------------------------------
+// Prime point rendering
+// ------------------------------------------------------------
+let currentPrimes = [];
+let pointsMesh = null;
+let trailLine = null;
+let maxAbs = 1;
+
+function colourFromT(t) {
+    // vivid rainbow
+    const c = new THREE.Color();
+    c.setHSL((0.78 - 0.78 * t + 1) % 1, 1.0, 0.52);
+    return c;
+}
+
+function rebuild() {
+    const maxValue = Number(document.getElementById("maxPrime").value);
+    const sequenceMode = document.getElementById("sequenceMode").value;
+
+    if (sequenceMode === "primes") {
+        currentPrimes = generatePrimes(maxValue);
+    } else {
+        currentPrimes = Array.from({ length: Math.max(0, maxValue - 1) }, (_, i) => i + 2);
+    }
+
+    if (pointsMesh) {
+        pointGroup.remove(pointsMesh);
+        pointsMesh.geometry.dispose();
+        pointsMesh.material.dispose();
+        pointsMesh = null;
+    }
+
+    if (trailLine) {
+        pointGroup.remove(trailLine);
+        trailLine.geometry.dispose();
+        trailLine.material.dispose();
+        trailLine = null;
+    }
+
+    const positions = [];
+    const colors = [];
+    const coords = [];
+
+    maxAbs = 0;
+
+    for (const p of currentPrimes) {
+        const s = Math.sin(p);
+        const c = Math.cos(p);
+
+        // Requested equations:
+        // x = p sin(p) cos(p)
+        // y = p sin(p)
+        // z = p cos(p)
+        const x = p * s * c;
+        const y = p * s;
+        const z = p * c;
+
+        coords.push(new THREE.Vector3(x, y, z));
+        positions.push(x, y, z);
+        maxAbs = Math.max(maxAbs, Math.abs(x), Math.abs(y), Math.abs(z));
+    }
+
+    const mode = document.getElementById("colourMode").value;
+
+    for (let i = 0; i < coords.length; i++) {
+        const p = currentPrimes[i];
+        let t;
+
+        if (mode === "z") {
+            t = (coords[i].z / maxAbs + 1) / 2;
+        } else if (mode === "p") {
+            t = (p - 2) / Math.max(1, maxValue - 2);
+        } else {
+            t = Math.min(1, coords[i].length() / maxAbs);
+        }
+
+        const col = colourFromT(t);
+        colors.push(col.r, col.g, col.b);
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+        size: Number(document.getElementById("pointSize").value),
+        sizeAttenuation: false,
+        vertexColors: true
+    });
+
+    pointsMesh = new THREE.Points(geometry, material);
+    pointGroup.add(pointsMesh);
+
+    if (document.getElementById("showTrail").checked) {
+        const trailGeometry = new THREE.BufferGeometry().setFromPoints(coords);
+        const trailMaterial = new THREE.LineBasicMaterial({
+            color: 0x888888,
+            transparent: true,
+            opacity: 0.35
+        });
+        trailLine = new THREE.Line(trailGeometry, trailMaterial);
+        pointGroup.add(trailLine);
+    }
+
+    updateHelpers(maxAbs);
+
+    const label = sequenceMode === "primes" ? "Prime Count" : "Integer Count";
+    document.getElementById("stats").innerHTML =
+        `${label}: <b>${currentPrimes.length}</b><br>` +
+        `Values: <b>2 → ${maxValue}</b><br>` +
+        `Max |x|,|y|,|z|: <b>${maxAbs.toFixed(1)}</b>`;
+}
+
+// ------------------------------------------------------------
+// UI
+// ------------------------------------------------------------
+const maxPrime = document.getElementById("maxPrime");
+const pointSize = document.getElementById("pointSize");
+
+maxPrime.addEventListener("input", () => {
+    document.getElementById("maxPrimeValue").textContent = maxPrime.value;
+    rebuild();
+});
+
+pointSize.addEventListener("input", () => {
+    document.getElementById("pointSizeValue").textContent = pointSize.value;
+    if (pointsMesh) pointsMesh.material.size = Number(pointSize.value);
+});
+
+document.getElementById("sequenceMode").addEventListener("change", rebuild);
+document.getElementById("colourMode").addEventListener("change", rebuild);
+document.getElementById("showTrail").addEventListener("change", rebuild);
+
+document.getElementById("showAxes").addEventListener("change", () => {
+    helperGroup.traverse(o => {
+        if (o.userData.isAxes) o.visible = document.getElementById("showAxes").checked;
+    });
+});
+
+document.getElementById("showGrid").addEventListener("change", () => {
+    helperGroup.children.forEach((o, i) => {
+        // first object is the horizontal grid; axes are controlled separately
+        if (!o.userData.isAxes) o.visible = document.getElementById("showGrid").checked;
+    });
+});
+
+document.getElementById("reset").addEventListener("click", resetView);
+
+window.addEventListener("resize", () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+});
+
+// ------------------------------------------------------------
+// Animation
+// ------------------------------------------------------------
+function animate() {
+    requestAnimationFrame(animate);
+
+    const cp = Math.cos(pitch);
+    camera.position.set(
+        target.x + distance * cp * Math.sin(yaw),
+        target.y + distance * Math.sin(pitch),
+        target.z + distance * cp * Math.cos(yaw)
+    );
+    camera.lookAt(target);
+
+    renderer.render(scene, camera);
+}
+
+rebuild();
+resetView();
+animate();
+</script>
+</body>
+</html>
