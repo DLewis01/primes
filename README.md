@@ -18,6 +18,7 @@ To explain this to my kids, I made the following programs,
 3. Graphing the Zeta functions.
 
 
+
 keep the grid initially straight and then let a "wave" sweep from right to left. Columns far to the right transform first (where ζ≈1 anyway), while columns near the pole at s=1s=1s=1 transform later and explode into the circular structure.
 
 Use an interpolation
@@ -293,6 +294,12 @@ The visualization is ultimately based on
 \frac{1}{s-1}
 +
 \gamma
+}
+\]
+
+which is the leading-order behavior of the Riemann zeta function near its simple pole at \(s=1\).
+
+
 }
 \]
 
