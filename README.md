@@ -17,14 +17,3 @@ To explain this to my kids, I made the following programs,
 2. Graphing primes to see if there is a pattern (there isn't - at least not a regular one).
 3. Graphing the Zeta functions.
 
-
-
-
-
-
-
-}
-\]
-
-which is the leading-order behavior of the Riemann zeta function near its simple pole at \(s=1\).
-
